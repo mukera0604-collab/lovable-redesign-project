@@ -8,11 +8,11 @@ const HeroSection = () => (
       <span className="text-sm text-foreground">Ethereum ETH</span>
     </div>
     <div className="absolute top-44 right-16 hidden lg:flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card/60 animate-float" style={{ animationDelay: "1s" }}>
-      <span className="text-amber-500">₿</span>
+      <span className="text-primary">₿</span>
       <span className="text-sm text-foreground">Bitcoin BTC</span>
     </div>
     <div className="absolute bottom-32 right-1/3 hidden lg:flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card/60 animate-float" style={{ animationDelay: "2s" }}>
-      <span className="text-pink-500">🦄</span>
+      <span className="text-primary">🦄</span>
       <span className="text-sm text-foreground">Uniswap UNI</span>
     </div>
 
