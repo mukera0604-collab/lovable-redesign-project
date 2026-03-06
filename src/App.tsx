@@ -13,6 +13,7 @@ import LoggedHome from "./pages/LoggedHome";
 import LoggedMarket from "./pages/LoggedMarket";
 import LoggedTrade from "./pages/LoggedTrade";
 import LoggedWallet from "./pages/LoggedWallet";
+import Rewards from "./pages/Rewards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/markets" element={<LoggedMarket />} />
           <Route path="/trade" element={<LoggedTrade />} />
           <Route path="/wallet" element={<LoggedWallet />} />
+          <Route path="/rewards" element={<Rewards />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

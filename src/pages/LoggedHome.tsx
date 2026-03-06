@@ -38,16 +38,29 @@ const LoggedHome = () => {
             { icon: Bell, label: "Upgrade", to: "#" },
             { icon: Gift, label: "Rewards", to: "/rewards" },
             { icon: Headphones, label: "Support", to: "https://t.me/web3derp", external: true },
-          ].map((item) => (
-            <Link
-              key={item.label}
-              to={item.to}
-              className="card-glass p-6 flex flex-col items-center gap-2 hover:border-primary/40 transition-colors"
-            >
-              <item.icon className="h-8 w-8 text-primary" />
-              <span className="text-sm text-foreground">{item.label}</span>
-            </Link>
-          ))}
+          ].map((item) =>
+            item.external ? (
+              <a
+                key={item.label}
+                href={item.to}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="card-glass p-6 flex flex-col items-center gap-2 hover:border-primary/40 transition-colors"
+              >
+                <item.icon className="h-8 w-8 text-primary" />
+                <span className="text-sm text-foreground">{item.label}</span>
+              </a>
+            ) : (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="card-glass p-6 flex flex-col items-center gap-2 hover:border-primary/40 transition-colors"
+              >
+                <item.icon className="h-8 w-8 text-primary" />
+                <span className="text-sm text-foreground">{item.label}</span>
+              </Link>
+            )
+          )}
         </div>
 
         {/* Promotions */}
