@@ -3,11 +3,11 @@ import { Home, BarChart3, ArrowLeftRight, ClipboardList, Wallet } from "lucide-r
 
 const BottomNav = () => {
   const items = [
-    { icon: Home, label: "Home", to: "/" },
-    { icon: BarChart3, label: "Markets", to: "#" },
-    { icon: ArrowLeftRight, label: "Trade", to: "#" },
+    { icon: Home, label: "Home", to: "/dashboard" },
+    { icon: BarChart3, label: "Markets", to: "/markets" },
+    { icon: ArrowLeftRight, label: "Trade", to: "/trade" },
     { icon: ClipboardList, label: "Orders", to: "#" },
-    { icon: Wallet, label: "Wallet", to: "/deposit" },
+    { icon: Wallet, label: "Wallet", to: "/wallet" },
   ];
 
   return (
