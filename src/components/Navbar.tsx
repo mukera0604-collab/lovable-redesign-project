@@ -4,7 +4,7 @@ import { Hexagon } from "lucide-react";
 const Navbar = () => {
   const location = useLocation();
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
-  const isDashboard = ["/deposit", "/withdraw"].includes(location.pathname);
+  const isDashboard = ["/deposit", "/withdraw", "/dashboard", "/markets", "/trade", "/wallet"].includes(location.pathname);
 
   return (
     <nav className="nav-gradient sticky top-0 z-50">
