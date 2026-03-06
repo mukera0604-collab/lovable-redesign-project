@@ -1,10 +1,12 @@
-import { Link, useLocation } from "react-router-dom";
-import { Hexagon } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Hexagon, User, Settings, LogOut } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
-  const isDashboard = ["/deposit", "/withdraw", "/dashboard", "/markets", "/trade", "/wallet"].includes(location.pathname);
+  const isDashboard = ["/deposit", "/withdraw", "/dashboard", "/markets", "/trade", "/wallet", "/rewards"].includes(location.pathname);
 
   return (
     <nav className="nav-gradient sticky top-0 z-50">
@@ -46,9 +48,37 @@ const Navbar = () => {
         )}
 
         {isDashboard && (
-          <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center">
-            <span className="text-muted-foreground text-lg">👤</span>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:border-primary/40 transition-colors">
+                <span className="text-muted-foreground text-lg">👤</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 p-2 bg-card border-border">
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm text-foreground hover:bg-secondary transition-colors"
+              >
+                <User className="h-4 w-4 text-muted-foreground" />
+                Edit Profile
+              </button>
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm text-foreground hover:bg-secondary transition-colors"
+              >
+                <Settings className="h-4 w-4 text-muted-foreground" />
+                Settings
+              </button>
+              <div className="my-1 border-t border-border" />
+              <button
+                onClick={() => navigate("/login")}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm text-destructive hover:bg-secondary transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
     </nav>
