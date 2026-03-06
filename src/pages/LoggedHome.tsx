@@ -1,18 +1,21 @@
 import { Link } from "react-router-dom";
 import { Users, TrendingUp, Landmark, ArrowLeftRight, CircleDollarSign, Bell, Gift, Headphones } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LoggedHome = () => {
+  const { profile } = useAuth();
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Welcome Card */}
         <div className="card-glass p-8 mb-8">
           <h1 className="text-2xl md:text-3xl font-display font-bold text-primary text-center mb-3">
-            Welcome to Web3 Derp
+            Welcome, {profile?.name?.split(" ")[0] || "User"}!
           </h1>
           <p className="text-muted-foreground text-center text-sm max-w-2xl mx-auto mb-6">
-            Trade confidently on our secure, fast, and transparent crypto platform. Explore advanced trading tools, track your portfolio, and grow your digital assets with ease.
+            You're all set to trade on Web3 Derp. Use the quick actions below or explore the markets to get started.
           </p>
           <div className="flex flex-wrap gap-4">
             <div className="card-glass p-5 flex-1 min-w-[200px]">
@@ -33,9 +36,8 @@ const LoggedHome = () => {
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { icon: Landmark, label: "Deposit", to: "/deposit" },
-            { icon: ArrowLeftRight, label: "Transfer", to: "#" },
+            { icon: ArrowLeftRight, label: "Transactions", to: "/transactions" },
             { icon: CircleDollarSign, label: "Withdraw", to: "/withdraw" },
-            { icon: Bell, label: "Upgrade", to: "#" },
             { icon: Gift, label: "Rewards", to: "/rewards" },
             { icon: Headphones, label: "Support", to: "https://t.me/web3derp", external: true },
           ].map((item) =>

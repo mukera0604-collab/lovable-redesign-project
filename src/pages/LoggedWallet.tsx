@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
 import { PlusCircle, MinusCircle, ArrowLeftRight, Bot, CircleDollarSign, CalendarCheck, Settings } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LoggedWallet = () => {
+  const { profile } = useAuth();
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -10,9 +13,9 @@ const LoggedWallet = () => {
         <div className="text-center mb-6">
           <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Total Balance</p>
           <p className="text-4xl font-display font-bold text-foreground">
-            0.00 <span className="text-lg font-medium">USDT</span>
+            {profile?.balance?.toLocaleString() ?? "0.00"} <span className="text-lg font-medium">USDT</span>
           </p>
-          <p className="text-sm text-muted-foreground mt-1">≈ $0.00 USD</p>
+          <p className="text-sm text-muted-foreground mt-1">≈ ${profile?.balance?.toLocaleString() ?? "0.00"} USD</p>
         </div>
 
         {/* Deposit / Withdraw / Transfer */}

@@ -6,7 +6,7 @@ const BottomNav = () => {
     { icon: Home, label: "Home", to: "/dashboard" },
     { icon: BarChart3, label: "Markets", to: "/markets" },
     { icon: ArrowLeftRight, label: "Trade", to: "/trade" },
-    { icon: ClipboardList, label: "Orders", to: "#" },
+    { icon: ClipboardList, label: "Orders", to: "/orders" },
     { icon: Wallet, label: "Wallet", to: "/wallet" },
   ];
 

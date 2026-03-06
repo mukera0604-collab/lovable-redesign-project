@@ -1,24 +1,27 @@
 import { useState } from "react";
 import BottomNav from "@/components/BottomNav";
+import { useQuery } from "@tanstack/react-query";
 
 type TabType = "Coins" | "Commodities" | "Metals";
 
-const coinsData = [
-  { name: "Tether", symbol: "USDT", price: "$1", change: -0.01 },
-  { name: "Bitcoin", symbol: "BTC", price: "$70,092", change: -3.12 },
-  { name: "Ethereum", symbol: "ETH", price: "$2,052.74", change: -2.88 },
-  { name: "USDC", symbol: "USDC", price: "$1", change: 0.01 },
-  { name: "Solana", symbol: "SOL", price: "$86.54", change: -5.26 },
-  { name: "XRP", symbol: "XRP", price: "$1.39", change: -2.33 },
-  { name: "USD1", symbol: "USD1", price: "$0.999", change: 0.05 },
-  { name: "BNB", symbol: "BNB", price: "$639.2", change: -2.42 },
-  { name: "Dogecoin", symbol: "DOGE", price: "$0.093", change: -2.20 },
-  { name: "Tether Gold", symbol: "XAUT", price: "$5,078.68", change: -0.36 },
-  { name: "Sui", symbol: "SUI", price: "$0.936", change: -2.96 },
-];
+const fetchCoins = async () => {
+  const response = await fetch(
+    "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=20&page=1&sparkline=false"
+  );
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return response.json();
+};
 
 const LoggedMarket = () => {
   const [tab, setTab] = useState<TabType>("Coins");
+
+  const { data: coins, isLoading, isError } = useQuery({
+    queryKey: ["coins"],
+    queryFn: fetchCoins,
+    refetchInterval: 60000, // Refresh every minute
+  });
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -36,11 +39,10 @@ const LoggedMarket = () => {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`pb-3 text-sm font-medium transition-colors ${
-                tab === t
+              className={`pb-3 text-sm font-medium transition-colors ${tab === t
                   ? "text-foreground border-b-2 border-primary"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               {t}
             </button>
@@ -57,29 +59,45 @@ const LoggedMarket = () => {
                 <th className="text-left text-xs text-primary font-medium px-4 py-3">Last Price (USD)</th>
                 <th className="text-left text-xs text-primary font-medium px-4 py-3">24h Change</th>
                 <th className="text-left text-xs text-primary font-medium px-4 py-3">Holdings</th>
-                <th className="text-left text-xs text-primary font-medium px-4 py-3">P/L %</th>
                 <th className="text-left text-xs text-primary font-medium px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
+              {tab === "Coins" && isLoading && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                    <div className="flex justify-center">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {tab === "Coins" && isError && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-destructive">
+                    Failed to load market data. Please try again later.
+                  </td>
+                </tr>
+              )}
               {tab === "Coins" &&
-                coinsData.map((coin) => (
-                  <tr key={coin.symbol} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                    <td className="px-4 py-4 text-sm text-foreground">{coin.name}</td>
-                    <td className="px-4 py-4 text-sm font-medium text-foreground">{coin.symbol}</td>
-                    <td className="px-4 py-4 text-sm text-foreground">{coin.price}</td>
+                coins?.map((coin: any) => (
+                  <tr key={coin.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                    <td className="px-4 py-4 text-sm text-foreground flex items-center gap-3">
+                      <img src={coin.image} alt={coin.name} className="w-6 h-6 rounded-full" />
+                      {coin.name}
+                    </td>
+                    <td className="px-4 py-4 text-sm font-medium text-foreground">{coin.symbol.toUpperCase()}</td>
+                    <td className="px-4 py-4 text-sm text-foreground">${coin.current_price.toLocaleString()}</td>
                     <td className="px-4 py-4">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                          coin.change >= 0
+                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${coin.price_change_percentage_24h >= 0
                             ? "bg-accent/20 text-accent"
                             : "bg-destructive/20 text-destructive"
-                        }`}
+                          }`}
                       >
-                        {coin.change >= 0 ? "" : ""}{coin.change}%
+                        {coin.price_change_percentage_24h?.toFixed(2)}%
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground">—</td>
                     <td className="px-4 py-4 text-sm text-muted-foreground">—</td>
                     <td className="px-4 py-4">
                       <button className="px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity">
@@ -90,7 +108,7 @@ const LoggedMarket = () => {
                 ))}
               {tab !== "Coins" && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground text-sm">
+                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground text-sm">
                     No {tab.toLowerCase()} data available yet.
                   </td>
                 </tr>
