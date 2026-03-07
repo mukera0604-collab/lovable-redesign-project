@@ -62,24 +62,24 @@ const Navbar = () => {
 
         {(isDashboard || user) && (
           <div className="flex items-center gap-4">
-            {profile && (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50 border border-border">
-                <Wallet className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-foreground">${profile.balance.toLocaleString()}</span>
-              </div>
-            )}
+
 
             <Popover>
               <PopoverTrigger asChild>
                 <button className="flex items-center gap-2 px-2 py-1 rounded-full border border-border hover:border-primary/40 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-primary text-sm font-bold">
-                      {profile?.name?.charAt(0).toUpperCase() || "U"}
-                    </span>
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-secondary">
+                    {user?.uid ? (
+                      <img
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-primary text-sm font-bold">
+                        {profile?.name?.charAt(0).toUpperCase() || "U"}
+                      </span>
+                    )}
                   </div>
-                  <span className="hidden md:block text-sm font-medium text-foreground mr-1">
-                    {profile?.name?.split(" ")[0] || "User"}
-                  </span>
                 </button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-56 p-2 bg-card border-border">

@@ -187,13 +187,7 @@ const LoggedTrade = () => {
       const tradeId = orderPushRef.key!;
       await set(orderPushRef, newOrder);
 
-      // Deduct from balance and add to tradeBalance
-      const newBalance = profile.balance - tradeAmount;
-      const newTradeBalance = profile.tradeBalance + profile.balance +  grossPayout;
-      const balRef = ref(rtdb, `users/${user.uid}/balance`);
-      await set(balRef, newBalance);
-      const tradeBalRef = ref(rtdb, `users/${user.uid}/tradeBalance`);
-      await set(tradeBalRef, newTradeBalance);
+   
 
       setAmount("");
 
@@ -232,8 +226,7 @@ const LoggedTrade = () => {
             <div className="text-right">
               <span className="text-xs text-muted-foreground block">Trade Balance</span>
               <span className="text-sm font-bold text-foreground">${profile?.tradeBalance?.toLocaleString() ?? "0.00"}</span>
-              <span className="text-xs text-muted-foreground block mt-1">Balance</span>
-              <span className="text-xs text-foreground">${profile?.balance?.toLocaleString() ?? "0.00"}</span>
+             
             </div>
           </div>
 

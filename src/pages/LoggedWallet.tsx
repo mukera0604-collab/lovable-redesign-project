@@ -26,7 +26,7 @@ const LoggedWallet = () => {
     });
   }, [user]);
 
-  const totalBalance = (profile?.balance ?? 0) + (profile?.tradeBalance ?? 0);
+  const totalBalance = (profile?.tradeBalance ?? 0);
 
   return (
     <div className="min-h-screen bg-background pb-24">

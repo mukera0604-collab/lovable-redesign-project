@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name,
             email,
             tradeBalance: 49398,
-            balance: 600,
+            balance: 49398,
             joinDate: new Date().toISOString(),
         };
 
