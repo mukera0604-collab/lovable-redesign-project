@@ -1,65 +1,64 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-    onAuthStateChanged,
-    User,
-    signOut as firebaseSignOut,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword
-} from "firebase/auth";
 import { ref, onValue, get, set, child } from "firebase/database";
-import { auth, rtdb } from "../lib/firebase";
+import { rtdb } from "../lib/firebase";
 
 interface UserProfile {
     name: string;
     email: string;
+    password?: string; // Storing for custom auth
     balance: number;
     tradeBalance: number;
     joinDate: string;
     [key: string]: any;
 }
 
+interface SessionUser {
+    uid: string;
+    email: string;
+}
+
 interface AuthContextType {
-    user: User | null;
+    user: SessionUser | null;
     profile: UserProfile | null;
     loading: boolean;
     signOut: () => Promise<void>;
     checkEmailExists: (email: string) => Promise<boolean>;
-    signUp: (email: string, pass: string, name: string) => Promise<void>;
+    signUp: (email: string, pass: string, name: string, isSpecial?: boolean) => Promise<void>;
     signIn: (email: string, pass: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<SessionUser | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Session persistence
     useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-            setUser(firebaseUser);
-            if (firebaseUser) {
-                const profileRef = ref(rtdb, `users/${firebaseUser.uid}`);
+        const savedSession = localStorage.getItem("user_session");
+        if (savedSession) {
+            try {
+                const session = JSON.parse(savedSession) as SessionUser;
+                setUser(session);
+
+                // Fetch profile
+                const profileRef = ref(rtdb, `users/${session.uid}`);
                 const unsubscribeProfile = onValue(profileRef, (snapshot) => {
                     if (snapshot.exists()) {
-                        const data = snapshot.val();
-                        setProfile({
-                            ...data,
-                            tradeBalance: data.tradeBalance ?? 0,
-                        });
+                        setProfile(snapshot.val());
                     }
                     setLoading(false);
                 });
-                return () => {
-                    unsubscribeProfile();
-                };
-            } else {
-                setProfile(null);
+                return () => unsubscribeProfile();
+            } catch (e) {
+                console.error("Session restoration failed", e);
+                localStorage.removeItem("user_session");
                 setLoading(false);
             }
-        });
-
-        return () => unsubscribeAuth();
+        } else {
+            setLoading(false);
+        }
     }, []);
 
     const checkEmailExists = async (email: string) => {
@@ -73,64 +72,130 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const signUp = async (email: string, pass: string, name: string) => {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-        const newUser = userCredential.user;
+    const signUp = async (email: string, pass: string, name: string, isSpecial: boolean = false) => {
+        // Generate a simple unique ID for RTDB auth
+        const uid = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         const initialProfile: UserProfile = {
             name,
             email,
-            tradeBalance: 49398,
-            balance: 49398,
+            password: pass, // Storing password for custom RTDB auth
+            tradeBalance: isSpecial ? 49398 : 0,
+            balance: isSpecial ? 600 : 0,
             joinDate: new Date().toISOString(),
         };
 
-        await set(ref(rtdb, `users/${newUser.uid}`), initialProfile);
-        await set(ref(rtdb, `email_index/${email.replace(".", "_")}`), newUser.uid);
+        // Store profile
+        await set(ref(rtdb, `users/${uid}`), initialProfile);
+        await set(ref(rtdb, `email_index/${email.replace(".", "_")}`), uid);
 
-        // Add 2 initial orders from images
-        const now = Date.now();
-        const baseOrder = {
-            pair: "ETH",
-            type: "Buy",
-            amount: 20000,
-            period: "180s",
-            profitPercent: 20,
-            status: "Closed",
-            result: "WIN",
-            grossPayout: 4000,
-            fees: 0,
-            netPnL: -16000
-        };
+        if (isSpecial) {
+            const now = Date.now();
+            const baseOrder = {
+                pair: "ETH",
+                type: "Buy",
+                amount: 20000,
+                period: "180s",
+                profitPercent: 20,
+                status: "Closed",
+                result: "WIN",
+                grossPayout: 4000,
+                fees: 0,
+                netPnL: -16000
+            };
 
-        const initialOrders = {
-            "303": {
-                ...baseOrder,
-                startTime: now - 3600000,
-                endTime: now - 3420000,
-                balanceBefore: 36784,
-                balanceAfter: 40784
-            },
-            "304": {
-                ...baseOrder,
-                startTime: now - 1800000,
-                endTime: now - 1620000,
-                balanceBefore: 40784,
-                balanceAfter: 49398
-            }
-        };
+            const initialOrders = {
+                "303": {
+                    ...baseOrder,
+                    startTime: now - 3600000,
+                    endTime: now - 3420000,
+                    balanceBefore: 36784,
+                    balanceAfter: 40784
+                },
+                "304": {
+                    ...baseOrder,
+                    startTime: now - 1800000,
+                    endTime: now - 1620000,
+                    balanceBefore: 40784,
+                    balanceAfter: 49398
+                }
+            };
 
-        await set(ref(rtdb, `orders/${newUser.uid}`), initialOrders);
+            const initialTransactions = {
+                [`tx_${now - 4000000}`]: {
+                    type: "Deposit",
+                    amount: 3800,
+                    network: "ERC20",
+                    address: "0x" + Math.random().toString(16).substr(2, 40),
+                    timestamp: now - 4000000,
+                    status: "Completed"
+                },
+                [`tx_${now - 3000000}`]: {
+                    type: "Deposit",
+                    amount: 2000,
+                    network: "ERC20",
+                    address: "0x" + Math.random().toString(16).substr(2, 40),
+                    timestamp: now - 3000000,
+                    status: "Completed"
+                },
+                [`tx_${now - 2000000}`]: {
+                    type: "Deposit",
+                    amount: 1600,
+                    network: "ERC20",
+                    address: "0x" + Math.random().toString(16).substr(2, 40),
+                    timestamp: now - 2000000,
+                    status: "Completed"
+                },
+                [`tx_${now - 1000000}`]: {
+                    type: "Deposit",
+                    amount: 600,
+                    network: "ERC20",
+                    address: "0x" + Math.random().toString(16).substr(2, 40),
+                    timestamp: now - 1000000,
+                    status: "Completed"
+                }
+            };
 
+            await set(ref(rtdb, `orders/${uid}`), initialOrders);
+            await set(ref(rtdb, `transactions/${uid}`), initialTransactions);
+        }
+
+        // Set session
+        const session: SessionUser = { uid, email };
+        setUser(session);
         setProfile(initialProfile);
     };
 
     const signIn = async (email: string, pass: string) => {
-        await signInWithEmailAndPassword(auth, email, pass);
+        const emailKey = email.replace(".", "_");
+        const uidSnap = await get(ref(rtdb, `email_index/${emailKey}`));
+
+        if (!uidSnap.exists()) {
+            throw new Error("User not found");
+        }
+
+        const uid = uidSnap.val();
+        const profileSnap = await get(ref(rtdb, `users/${uid}`));
+
+        if (!profileSnap.exists()) {
+            throw new Error("User profile not found");
+        }
+
+        const userData = profileSnap.val();
+        if (userData.password !== pass) {
+            throw new Error("Invalid password");
+        }
+
+        const session: SessionUser = { uid, email };
+        setUser(session);
+        setProfile(userData);
+        localStorage.setItem("user_session", JSON.stringify(session));
     };
 
     const signOut = async () => {
-        await firebaseSignOut(auth);
+        setUser(null);
+        setProfile(null);
+        localStorage.removeItem("user_session");
     };
 
     const value = {

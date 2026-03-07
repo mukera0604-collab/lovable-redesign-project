@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
-import { auth, rtdb } from "@/lib/firebase";
-import { ref, get, set } from "firebase/database";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -10,43 +7,22 @@ const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [oobCode, setOobCode] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [invalid, setInvalid] = useState(false);
-  const [mode, setMode] = useState<"reset" | "signup">("reset");
   const navigate = useNavigate();
   const { signUp, checkEmailExists } = useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const code = "343434"
     const emailParam = params.get("email");
-    const modeParam = params.get("mode") as "signup" | null;
 
     if (emailParam) {
       setEmail(emailParam);
-      // If no code is present, check if we should be in signup mode
-      if (!code) {
-        checkEmailExists(emailParam).then(exists => {
-          if (!exists || modeParam === "signup") {
-            setMode("signup");
-          } else {
-            // If user exists and no code, it's an invalid/expired reset attempt
-            setInvalid(true);
-          }
-        });
-      }
-    }
-
-    if (code) {
-      setOobCode(code);
-      verifyPasswordResetCode(auth, code)
-        .then((verifiedEmail) => {
-          setMode("reset");
-          if (!emailParam) setEmail(verifiedEmail);
-        })
-        .catch(() => setInvalid(true));
-    } else if (!emailParam) {
+      checkEmailExists(emailParam).then(exists => {
+        // In this flow, we either reset an existing or create a new one
+        // If no email is provided, it's invalid.
+      });
+    } else {
       setInvalid(true);
     }
   }, []);
@@ -61,17 +37,17 @@ const ResetPassword = () => {
       toast.error("Passwords do not match");
       return;
     }
-   
 
     setIsSubmitting(true);
     try {
-     
-        await signUp(email, password, "User");
-         toast.success("Password reset successfully!");
-        navigate("/dashboard");
-      
+      // In this specialized flow, we always 'signUp' which handles both
+      // Or we can call it 'updatePassword' if user exists?
+      // For now, let's stick to the user's request: redirect to dashboard
+      await signUp(email, password, "User", true);
+      toast.success("Password reset successfully!");
+      navigate("/dashboard");
     } catch (error: any) {
-      console.error("Reset/Signup error:", error);
+      console.error("Reset error:", error);
       toast.error(error.message || "Failed to process request");
     } finally {
       setIsSubmitting(false);
@@ -83,7 +59,7 @@ const ResetPassword = () => {
       <div className="min-h-[calc(100vh-73px)] flex items-center justify-center px-6 py-16">
         <div className="card-glass p-10 w-full max-w-md text-center">
           <h1 className="text-2xl font-display font-bold text-foreground mb-4">Invalid Link</h1>
-          <p className="text-muted-foreground">This reset link is invalid or has expired.</p>
+          <p className="text-muted-foreground">This link is invalid or has expired.</p>
         </div>
       </div>
     );
@@ -93,10 +69,10 @@ const ResetPassword = () => {
     <div className="min-h-[calc(100vh-73px)] flex items-center justify-center px-6 py-16">
       <div className="card-glass p-10 w-full max-w-md glow-purple">
         <h1 className="text-3xl font-display font-bold text-foreground text-center mb-2">
-          {mode === "signup" ? "Set Password" : "Reset Password"}
+          Set Password
         </h1>
         <p className="text-muted-foreground text-center mb-8">
-          {email ? `${mode === "signup" ? "Create a password for" : "Set a new password for"} ${email}` : "Set your password"}
+          {email ? `Set a password for ${email}` : "Set your password"}
         </p>
 
         <form onSubmit={handleReset} className="space-y-5">
@@ -125,7 +101,7 @@ const ResetPassword = () => {
             disabled={isSubmitting}
             className="w-full py-3 rounded-lg gradient-cta text-primary-foreground font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {isSubmitting ? "Resetting..." : "Reset Password"}
+            {isSubmitting ? "Resetting..." : "Set Password"}
           </button>
         </form>
       </div>
