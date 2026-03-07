@@ -174,9 +174,13 @@ const LoggedTrade = () => {
       const tradeId = orderPushRef.key!;
       await set(orderPushRef, newOrder);
 
-      // Deduct from balance
+      // Deduct from balance and add to tradeBalance
+      const newBalance = profile.balance - tradeAmount;
+      const newTradeBalance = (profile.tradeBalance ?? 0) + tradeAmount;
       const balRef = ref(rtdb, `users/${user.uid}/balance`);
-      await set(balRef, profile.balance - tradeAmount);
+      await set(balRef, newBalance);
+      const tradeBalRef = ref(rtdb, `users/${user.uid}/tradeBalance`);
+      await set(tradeBalRef, newTradeBalance);
 
       setAmount("");
 
