@@ -86,9 +86,9 @@ const LoggedTrade = () => {
     const profitPercent = selectedPeriod.profit;
     const grossPayout = trade.amount * (profitPercent / 100);
     const fees = 0;
-    const balanceBefore = profile.tradeBalance;
+    const balanceBefore = profile.balance;
     const balanceAfter = balanceBefore + grossPayout;
-    const netPnL = grossPayout - trade.amount;
+    const netPnL = grossPayout;
 
     const receiptData: TradeReceipt = {
       tradeId: trade.tradeId,
@@ -117,7 +117,9 @@ const LoggedTrade = () => {
       balanceAfter,
     });
 
-    // Update trade balance
+    // Update balance and set tradeBalance to balanceAfter
+    const balRef = ref(rtdb, `users/${user.uid}/balance`);
+    await set(balRef, balanceAfter);
     const tradeBalRef = ref(rtdb, `users/${user.uid}/tradeBalance`);
     await set(tradeBalRef, balanceAfter);
 
@@ -141,13 +143,13 @@ const LoggedTrade = () => {
       return;
     }
 
-    if (profile.tradeBalance < tradeAmount) {
-      alert("Insufficient trade balance.");
+    if (profile.balance < tradeAmount) {
+      alert("Insufficient balance.");
       return;
     }
 
-    if (profile.tradeBalance < selectedPeriod.limit) {
-      alert(`Your trade balance must be at least $${selectedPeriod.limit} to trade in this period.`);
+    if (profile.balance < selectedPeriod.limit) {
+      alert(`Your balance must be at least $${selectedPeriod.limit} to trade in this period.`);
       return;
     }
 
@@ -172,9 +174,9 @@ const LoggedTrade = () => {
       const tradeId = orderPushRef.key!;
       await set(orderPushRef, newOrder);
 
-      // Deduct from trade balance
-      const tradeBalRef = ref(rtdb, `users/${user.uid}/tradeBalance`);
-      await set(tradeBalRef, profile.tradeBalance - tradeAmount);
+      // Deduct from balance
+      const balRef = ref(rtdb, `users/${user.uid}/balance`);
+      await set(balRef, profile.balance - tradeAmount);
 
       setAmount("");
 

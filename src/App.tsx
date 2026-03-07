@@ -14,6 +14,8 @@ import LoggedMarket from "./pages/LoggedMarket";
 import LoggedTrade from "./pages/LoggedTrade";
 import LoggedWallet from "./pages/LoggedWallet";
 import Rewards from "./pages/Rewards";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -60,6 +62,8 @@ const App = () => (
             <Route path="/" element={<HomeRoute />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/deposit" element={<ProtectedRoute><Deposit /></ProtectedRoute>} />
             <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><LoggedHome /></ProtectedRoute>} />
