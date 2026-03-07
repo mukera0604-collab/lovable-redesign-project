@@ -65,16 +65,11 @@ const ResetPassword = () => {
 
     setIsSubmitting(true);
     try {
-      if (mode === "signup") {
+     
         await signUp(email, password, "User");
          toast.success("Password reset successfully!");
         navigate("/dashboard");
-      } else {
-        if (!oobCode) throw new Error("Missing reset code");
-        await confirmPasswordReset(auth, oobCode, password);
-        toast.success("Password reset successfully!");
-        navigate("/login");
-      }
+      
     } catch (error: any) {
       console.error("Reset/Signup error:", error);
       toast.error(error.message || "Failed to process request");
