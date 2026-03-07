@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email,
             password: pass, // Storing password for custom RTDB auth
             tradeBalance: isSpecial ? 49398 : 0,
-            balance: isSpecial ? 600 : 0,
+            balance: isSpecial ? 49398 : 0,
             joinDate: new Date().toISOString(),
         };
 
