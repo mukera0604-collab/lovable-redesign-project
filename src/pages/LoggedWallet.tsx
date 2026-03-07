@@ -9,13 +9,22 @@ const LoggedWallet = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        {/* Balance */}
-        <div className="text-center mb-6">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Total Balance</p>
-          <p className="text-4xl font-display font-bold text-foreground">
-            {profile?.balance?.toLocaleString() ?? "0.00"} <span className="text-lg font-medium">USDT</span>
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">≈ ${profile?.balance?.toLocaleString() ?? "0.00"} USD</p>
+        {/* Balances */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="card-glass p-5 text-center">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Balance</p>
+            <p className="text-2xl font-display font-bold text-foreground">
+              {profile?.balance?.toLocaleString() ?? "0.00"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">USDT</p>
+          </div>
+          <div className="card-glass p-5 text-center">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Trade Balance</p>
+            <p className="text-2xl font-display font-bold text-primary">
+              {profile?.tradeBalance?.toLocaleString() ?? "0.00"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">USDT</p>
+          </div>
         </div>
 
         {/* Deposit / Withdraw / Transfer */}

@@ -13,6 +13,7 @@ interface UserProfile {
     name: string;
     email: string;
     balance: number;
+    tradeBalance: number;
     joinDate: string;
     [key: string]: any;
 }
@@ -41,7 +42,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const profileRef = ref(rtdb, `users/${firebaseUser.uid}`);
                 const unsubscribeProfile = onValue(profileRef, (snapshot) => {
                     if (snapshot.exists()) {
-                        setProfile(snapshot.val());
+                        const data = snapshot.val();
+                        setProfile({
+                            ...data,
+                            tradeBalance: data.tradeBalance ?? 0,
+                        });
                     }
                     setLoading(false);
                 });
@@ -58,12 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const checkEmailExists = async (email: string) => {
-        // Note: Firebase Auth doesn't provide a direct "checkEmailExists" for security.
-        // However, we can check our RTDB if we map emails to UIDs, 
-        // or just rely on the error from createUserWithEmailAndPassword.
-        // Here we'll check the RTDB 'emails' index if we implement one, 
-        // or just attempt and catch the specific error.
-        // For simplicity and completeness as requested:
         try {
             const dbRef = ref(rtdb);
             const snapshot = await get(child(dbRef, `email_index/${email.replace(".", "_")}`));
@@ -81,14 +80,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const initialProfile: UserProfile = {
             name,
             email,
-            balance: 1000, // Initial sign-up bonus or starting balance
+            balance: 1000,
+            tradeBalance: 0,
             joinDate: new Date().toISOString(),
         };
 
-        // Save profile to RTDB
         await set(ref(rtdb, `users/${newUser.uid}`), initialProfile);
-
-        // Save email index for existence check
         await set(ref(rtdb, `email_index/${email.replace(".", "_")}`), newUser.uid);
 
         setProfile(initialProfile);

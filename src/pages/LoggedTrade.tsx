@@ -1,8 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { ref, push, set, onValue } from "firebase/database";
+import { ref, push, set, onValue, update } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
+import { X, Receipt } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const pairs = [
   { value: "BTC", label: "BTC - Bitcoin" },
@@ -12,23 +19,26 @@ const pairs = [
 ];
 
 const periods = [
-  { duration: "60s", seconds: 60, profit: "10%", limit: 300 },
-  { duration: "120s", seconds: 120, profit: "15%", limit: 5000 },
-  { duration: "180s", seconds: 180, profit: "20%", limit: 20000 },
-  { duration: "240s", seconds: 240, profit: "27%", limit: 40000 },
-  { duration: "360s", seconds: 360, profit: "30%", limit: 100000 },
+  { duration: "60s", seconds: 60, profit: 10, limit: 300 },
+  { duration: "120s", seconds: 120, profit: 15, limit: 5000 },
+  { duration: "180s", seconds: 180, profit: 20, limit: 20000 },
+  { duration: "240s", seconds: 240, profit: 27, limit: 40000 },
+  { duration: "360s", seconds: 360, profit: 30, limit: 100000 },
 ];
 
-interface Order {
-  id: string;
+interface TradeReceipt {
+  tradeId: string;
   pair: string;
   type: "Buy" | "Sell";
   amount: number;
-  period: string;
-  profit: string;
-  startTime: number;
-  endTime: number;
-  status: "Open" | "Closed";
+  duration: number;
+  profitPercent: number;
+  grossPayout: number;
+  fees: number;
+  netPnL: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  result: "WIN";
 }
 
 const LoggedTrade = () => {
@@ -37,6 +47,90 @@ const LoggedTrade = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(periods[0]);
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Countdown dialog
+  const [countdownOpen, setCountdownOpen] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState(0);
+  const [activeTrade, setActiveTrade] = useState<{
+    pair: string;
+    type: "Buy" | "Sell";
+    amount: number;
+    totalSeconds: number;
+    tradeId: string;
+  } | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Receipt dialog
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receipt, setReceipt] = useState<TradeReceipt | null>(null);
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdownOpen && countdownSeconds > 0) {
+      countdownRef.current = setTimeout(() => {
+        setCountdownSeconds((s) => s - 1);
+      }, 1000);
+    } else if (countdownOpen && countdownSeconds === 0 && activeTrade) {
+      // Timer finished — settle the trade
+      settleTrade(activeTrade);
+      setCountdownOpen(false);
+    }
+    return () => {
+      if (countdownRef.current) clearTimeout(countdownRef.current);
+    };
+  }, [countdownOpen, countdownSeconds]);
+
+  const settleTrade = async (trade: NonNullable<typeof activeTrade>) => {
+    if (!user || !profile) return;
+
+    const profitPercent = selectedPeriod.profit;
+    const grossPayout = trade.amount * (profitPercent / 100);
+    const fees = 0;
+    const balanceBefore = profile.tradeBalance;
+    const balanceAfter = balanceBefore + grossPayout;
+    const netPnL = grossPayout - trade.amount;
+
+    const receiptData: TradeReceipt = {
+      tradeId: trade.tradeId,
+      pair: trade.pair,
+      type: trade.type,
+      amount: trade.amount,
+      duration: trade.totalSeconds,
+      profitPercent,
+      grossPayout,
+      fees,
+      netPnL,
+      balanceBefore,
+      balanceAfter,
+      result: "WIN",
+    };
+
+    // Update order status to Closed and add settlement data
+    const orderRef = ref(rtdb, `orders/${user.uid}/${trade.tradeId}`);
+    await update(orderRef, {
+      status: "Closed",
+      result: "WIN",
+      grossPayout,
+      fees,
+      netPnL,
+      balanceBefore,
+      balanceAfter,
+    });
+
+    // Update trade balance
+    const tradeBalRef = ref(rtdb, `users/${user.uid}/tradeBalance`);
+    await set(tradeBalRef, balanceAfter);
+
+    setReceipt(receiptData);
+    setActiveTrade(null);
+    setReceiptOpen(true);
+  };
+
+  const formatCountdown = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+  };
 
   const handleTrade = async (type: "Buy" | "Sell") => {
     if (!user || !profile) return;
@@ -47,13 +141,13 @@ const LoggedTrade = () => {
       return;
     }
 
-    if (profile.balance < tradeAmount) {
-      alert("Insufficient balance.");
+    if (profile.tradeBalance < tradeAmount) {
+      alert("Insufficient trade balance.");
       return;
     }
 
-    if (profile.balance < selectedPeriod.limit) {
-      alert(`Your balance must be greater than $${selectedPeriod.limit} to trade in this period.`);
+    if (profile.tradeBalance < selectedPeriod.limit) {
+      alert(`Your trade balance must be at least $${selectedPeriod.limit} to trade in this period.`);
       return;
     }
 
@@ -67,23 +161,33 @@ const LoggedTrade = () => {
         type,
         amount: tradeAmount,
         period: selectedPeriod.duration,
-        profit: selectedPeriod.profit,
+        profitPercent: selectedPeriod.profit,
         startTime,
         endTime,
         status: "Open",
       };
 
-      // Push order to RTDB
       const ordersRef = ref(rtdb, `orders/${user.uid}`);
       const orderPushRef = push(ordersRef);
+      const tradeId = orderPushRef.key!;
       await set(orderPushRef, newOrder);
 
-      // Deduct balance
-      const balanceRef = ref(rtdb, `users/${user.uid}/balance`);
-      await set(balanceRef, profile.balance - tradeAmount);
+      // Deduct from trade balance
+      const tradeBalRef = ref(rtdb, `users/${user.uid}/tradeBalance`);
+      await set(tradeBalRef, profile.tradeBalance - tradeAmount);
 
       setAmount("");
-      alert(`${type} order placed successfully!`);
+
+      // Start countdown
+      setActiveTrade({
+        pair: selectedPair,
+        type,
+        amount: tradeAmount,
+        totalSeconds: selectedPeriod.seconds,
+        tradeId,
+      });
+      setCountdownSeconds(selectedPeriod.seconds);
+      setCountdownOpen(true);
     } catch (error) {
       console.error("Trade error:", error);
       alert("Failed to place order. Please try again.");
@@ -107,8 +211,10 @@ const LoggedTrade = () => {
               ))}
             </select>
             <div className="text-right">
-              <span className="text-xs text-muted-foreground block">Balance</span>
-              <span className="text-sm font-bold text-foreground">${profile?.balance?.toLocaleString() ?? "0.00"}</span>
+              <span className="text-xs text-muted-foreground block">Trade Balance</span>
+              <span className="text-sm font-bold text-foreground">${profile?.tradeBalance?.toLocaleString() ?? "0.00"}</span>
+              <span className="text-xs text-muted-foreground block mt-1">Balance</span>
+              <span className="text-xs text-foreground">${profile?.balance?.toLocaleString() ?? "0.00"}</span>
             </div>
           </div>
 
@@ -141,7 +247,7 @@ const LoggedTrade = () => {
                   }`}
               >
                 <span className="block text-sm font-bold">{p.duration}</span>
-                <span className="block text-[10px] text-muted-foreground mt-0.5">{p.profit} Profit</span>
+                <span className="block text-[10px] text-muted-foreground mt-0.5">{p.profit}% Profit</span>
                 <span className="block text-[10px] text-muted-foreground">${p.limit} Limit</span>
               </button>
             ))}
@@ -171,9 +277,93 @@ const LoggedTrade = () => {
               {loading ? "..." : "Buy"}
             </button>
           </div>
-
         </div>
       </div>
+
+      {/* Countdown Dialog */}
+      <Dialog open={countdownOpen} onOpenChange={() => {}}>
+        <DialogContent className="max-w-sm bg-[hsl(var(--card))] border-border" hideClose>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-foreground">{activeTrade?.pair}/USDT</span>
+              <span className={`text-xs font-bold px-2 py-1 rounded ${activeTrade?.type === "Buy" ? "bg-accent text-accent-foreground" : "bg-destructive text-destructive-foreground"}`}>
+                {activeTrade?.type?.toUpperCase()}
+              </span>
+            </div>
+            <button onClick={() => setCountdownOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="text-center py-6">
+            <p className="text-5xl font-display font-bold text-foreground mb-6">
+              {formatCountdown(countdownSeconds)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Amount: {activeTrade?.amount?.toLocaleString()} USDT
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Timer: {activeTrade?.totalSeconds} sec
+            </p>
+            <p className="text-sm text-accent font-medium mt-2">Running...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Trade Receipt Dialog */}
+      <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>
+        <DialogContent className="max-w-sm bg-background border-border">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+                  <Receipt className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <DialogTitle className="text-xl font-display">Trade Receipt</DialogTitle>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full border border-accent text-accent">
+                {receipt?.result}
+              </span>
+            </div>
+          </DialogHeader>
+
+          {receipt && (
+            <div className="space-y-6 mt-2">
+              <div className="card-glass p-4 space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Trade Details</h4>
+                {[
+                  ["Trade ID", receipt.tradeId.slice(-6)],
+                  ["Pair", `${receipt.pair} / USDT`],
+                  ["Direction", receipt.type.toUpperCase()],
+                  ["Amount", `${receipt.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                  ["Duration", `${receipt.duration} s`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-medium text-foreground">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="card-glass p-4 space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Settlement Summary</h4>
+                {[
+                  ["Result", receipt.result],
+                  ["Gross Payout", `${receipt.grossPayout.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                  ["Fees", `${receipt.fees.toFixed(2)} USDT`],
+                  ["Net P&L", `${receipt.netPnL.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                  ["Balance (Before)", `${receipt.balanceBefore.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                  ["Balance (After)", `${receipt.balanceAfter.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-medium text-foreground">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
