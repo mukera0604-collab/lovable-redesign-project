@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     ...baseOrder,
                     startTime: now - 1800000,
                     endTime: now - 1620000,
-                    balanceBefore: 40784,
+                    balanceBefore: 45398,
                     balanceAfter: 49398
                 }
             };
