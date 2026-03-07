@@ -152,6 +152,12 @@ const LoggedTrade = () => {
       alert(`Your balance must be at least $${selectedPeriod.limit} to trade in this period.`);
       return;
     }
+      const profitPercent = selectedPeriod.profit;
+    const grossPayout = tradeAmount * (profitPercent / 100);
+    const fees = 0;
+    const balanceBefore = profile.balance;
+    const balanceAfter = balanceBefore + grossPayout;
+    const netPnL = grossPayout;
 
     setLoading(true);
     try {
@@ -166,7 +172,14 @@ const LoggedTrade = () => {
         profitPercent: selectedPeriod.profit,
         startTime,
         endTime,
-        status: "Open",
+      
+      grossPayout,
+      fees,
+      netPnL,
+      balanceBefore,
+      balanceAfter,
+      result: "WIN",
+      status: "Open",
       };
 
       const ordersRef = ref(rtdb, `orders/${user.uid}`);
