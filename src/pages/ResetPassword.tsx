@@ -19,7 +19,7 @@ const ResetPassword = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const code = params.get("oobCode");
+    const code = "343434"
     const emailParam = params.get("email");
     const modeParam = params.get("mode") as "signup" | null;
 
