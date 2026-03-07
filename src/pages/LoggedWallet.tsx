@@ -1,10 +1,30 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { PlusCircle, MinusCircle, ArrowLeftRight, Bot, CircleDollarSign, CalendarCheck, Settings } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
+import { ref, get, set, query, orderByChild, limitToLast } from "firebase/database";
+import { rtdb } from "@/lib/firebase";
 
 const LoggedWallet = () => {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+
+  // Sync tradeBalance from last closed order's balanceAfter
+  useEffect(() => {
+    if (!user) return;
+    const ordersRef = ref(rtdb, `orders/${user.uid}`);
+    get(ordersRef).then((snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.val();
+      const closedOrders = Object.values(data)
+        .filter((o: any) => o.status === "Closed" && o.balanceAfter !== undefined)
+        .sort((a: any, b: any) => b.endTime - a.endTime);
+      if (closedOrders.length > 0) {
+        const lastBalanceAfter = (closedOrders[0] as any).balanceAfter;
+        set(ref(rtdb, `users/${user.uid}/tradeBalance`), lastBalanceAfter);
+      }
+    });
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-background pb-24">

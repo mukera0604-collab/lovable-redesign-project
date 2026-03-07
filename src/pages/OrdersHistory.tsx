@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronLeft, ClipboardList, Receipt } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { ref, onValue, update } from "firebase/database";
+import { ref, onValue, update, get, set } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
 import {
   Dialog,
@@ -49,10 +49,32 @@ const OrdersHistory = () => {
         })).sort((a: any, b: any) => b.startTime - a.startTime);
 
         const now = Date.now();
-        ordersList.forEach((order: any) => {
-          if (order.status === "Open" && now >= order.endTime) {
+        ordersList.forEach(async (order: any) => {
+          if (order.status === "Open" && now >= order.endTime && !order.result) {
+            // Settle the expired order
+            const userSnap = await get(ref(rtdb, `users/${user.uid}`));
+            const userData = userSnap.val();
+            const currentBalance = userData?.balance ?? 0;
+            const grossPayout = order.amount * (order.profitPercent / 100);
+            const fees = 0;
+            const netPnL = grossPayout;
+            const balanceBefore = currentBalance;
+            const balanceAfter = currentBalance + grossPayout;
+
             const orderRef = ref(rtdb, `orders/${user.uid}/${order.id}`);
-            update(orderRef, { status: "Closed" });
+            await update(orderRef, {
+              status: "Closed",
+              result: "WIN",
+              grossPayout,
+              fees,
+              netPnL,
+              balanceBefore,
+              balanceAfter,
+            });
+
+            // Update user balances
+            await set(ref(rtdb, `users/${user.uid}/balance`), balanceAfter);
+            await set(ref(rtdb, `users/${user.uid}/tradeBalance`), balanceAfter);
           }
         });
 
