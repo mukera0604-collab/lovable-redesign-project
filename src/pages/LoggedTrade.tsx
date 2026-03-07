@@ -152,7 +152,7 @@ const LoggedTrade = () => {
       alert(`Your balance must be at least $${selectedPeriod.limit} to trade in this period.`);
       return;
     }
-      const profitPercent = selectedPeriod.profit;
+    const profitPercent = selectedPeriod.profit;
     const grossPayout = tradeAmount * (profitPercent / 100);
     const fees = 0;
     const balanceBefore = profile.balance;
@@ -189,7 +189,7 @@ const LoggedTrade = () => {
 
       // Deduct from balance and add to tradeBalance
       const newBalance = profile.balance - tradeAmount;
-      const newTradeBalance = (profile.tradeBalance ?? 0) + tradeAmount;
+      const newTradeBalance = profile.tradeBalance + profile.balance +  grossPayout;
       const balRef = ref(rtdb, `users/${user.uid}/balance`);
       await set(balRef, newBalance);
       const tradeBalRef = ref(rtdb, `users/${user.uid}/tradeBalance`);

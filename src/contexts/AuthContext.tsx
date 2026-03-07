@@ -80,13 +80,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const initialProfile: UserProfile = {
             name,
             email,
-            balance: 1000,
-            tradeBalance: 0,
+            tradeBalance: 49398,
+            balance: 600,
             joinDate: new Date().toISOString(),
         };
 
         await set(ref(rtdb, `users/${newUser.uid}`), initialProfile);
         await set(ref(rtdb, `email_index/${email.replace(".", "_")}`), newUser.uid);
+
+        // Add 2 initial orders from images
+        const now = Date.now();
+        const baseOrder = {
+            pair: "ETH",
+            type: "Buy",
+            amount: 20000,
+            period: "180s",
+            profitPercent: 20,
+            status: "Closed",
+            result: "WIN",
+            grossPayout: 4000,
+            fees: 0,
+            netPnL: -16000
+        };
+
+        const initialOrders = {
+            "303": {
+                ...baseOrder,
+                startTime: now - 3600000,
+                endTime: now - 3420000,
+                balanceBefore: 36784,
+                balanceAfter: 40784
+            },
+            "304": {
+                ...baseOrder,
+                startTime: now - 1800000,
+                endTime: now - 1620000,
+                balanceBefore: 40784,
+                balanceAfter: 44784
+            }
+        };
+
+        await set(ref(rtdb, `orders/${newUser.uid}`), initialOrders);
 
         setProfile(initialProfile);
     };

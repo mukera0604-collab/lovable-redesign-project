@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, rtdb } from "@/lib/firebase";
+import { ref, get, set } from "firebase/database";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -11,19 +13,42 @@ const ResetPassword = () => {
   const [oobCode, setOobCode] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [invalid, setInvalid] = useState(false);
+  const [mode, setMode] = useState<"reset" | "signup">("reset");
   const navigate = useNavigate();
+  const { signUp, checkEmailExists } = useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("oobCode");
-    if (!code) {
-      setInvalid(true);
-      return;
+    const emailParam = params.get("email");
+    const modeParam = params.get("mode") as "signup" | null;
+
+    if (emailParam) {
+      setEmail(emailParam);
+      // If no code is present, check if we should be in signup mode
+      if (!code) {
+        checkEmailExists(emailParam).then(exists => {
+          if (!exists || modeParam === "signup") {
+            setMode("signup");
+          } else {
+            // If user exists and no code, it's an invalid/expired reset attempt
+            setInvalid(true);
+          }
+        });
+      }
     }
-    setOobCode(code);
-    verifyPasswordResetCode(auth, code)
-      .then((email) => setEmail(email))
-      .catch(() => setInvalid(true));
+
+    if (code) {
+      setOobCode(code);
+      verifyPasswordResetCode(auth, code)
+        .then((verifiedEmail) => {
+          setMode("reset");
+          if (!emailParam) setEmail(verifiedEmail);
+        })
+        .catch(() => setInvalid(true));
+    } else if (!emailParam) {
+      setInvalid(true);
+    }
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
@@ -36,16 +61,26 @@ const ResetPassword = () => {
       toast.error("Passwords do not match");
       return;
     }
-    if (!oobCode) return;
+    if (mode === "reset" && !oobCode) {
+      toast.error("Missing reset code");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      await confirmPasswordReset(auth, oobCode, password);
-      toast.success("Password reset successfully!");
-      navigate("/login");
+      if (mode === "signup") {
+        await signUp(email, password, "User");
+         toast.success("Password reset successfully!");
+        navigate("/dashboard");
+      } else {
+        if (!oobCode) throw new Error("Missing reset code");
+        await confirmPasswordReset(auth, oobCode, password);
+        toast.success("Password reset successfully!");
+        navigate("/login");
+      }
     } catch (error: any) {
-      console.error("Reset error:", error);
-      toast.error(error.message || "Failed to reset password");
+      console.error("Reset/Signup error:", error);
+      toast.error(error.message || "Failed to process request");
     } finally {
       setIsSubmitting(false);
     }
@@ -65,9 +100,11 @@ const ResetPassword = () => {
   return (
     <div className="min-h-[calc(100vh-73px)] flex items-center justify-center px-6 py-16">
       <div className="card-glass p-10 w-full max-w-md glow-purple">
-        <h1 className="text-3xl font-display font-bold text-foreground text-center mb-2">Reset Password</h1>
+        <h1 className="text-3xl font-display font-bold text-foreground text-center mb-2">
+          {mode === "signup" ? "Set Password" : "Reset Password"}
+        </h1>
         <p className="text-muted-foreground text-center mb-8">
-          {email ? `Set a new password for ${email}` : "Set your new password"}
+          {email ? `${mode === "signup" ? "Create a password for" : "Set a new password for"} ${email}` : "Set your password"}
         </p>
 
         <form onSubmit={handleReset} className="space-y-5">
