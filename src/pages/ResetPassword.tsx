@@ -61,10 +61,7 @@ const ResetPassword = () => {
       toast.error("Passwords do not match");
       return;
     }
-    if (mode === "reset" && !oobCode) {
-      toast.error("Missing reset code");
-      return;
-    }
+   
 
     setIsSubmitting(true);
     try {
