@@ -59,7 +59,7 @@ const OrdersHistory = () => {
             const fees = 0;
             const netPnL = grossPayout;
             const balanceBefore = currentBalance;
-            const balanceAfter = currentBalance + grossPayout;
+           
 
             const orderRef = ref(rtdb, `orders/${user.uid}/${order.id}`);
             await update(orderRef, {
@@ -69,12 +69,12 @@ const OrdersHistory = () => {
               fees,
               netPnL,
               balanceBefore,
-              balanceAfter,
+           
             });
 
             // Update user balances
-            await set(ref(rtdb, `users/${user.uid}/balance`), balanceAfter);
-            await set(ref(rtdb, `users/${user.uid}/tradeBalance`), balanceAfter);
+            await set(ref(rtdb, `users/${user.uid}/balance`), currentBalance );
+            await set(ref(rtdb, `users/${user.uid}/tradeBalance`), currentBalance );
           }
         });
 
