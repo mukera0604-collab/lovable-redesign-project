@@ -66,7 +66,7 @@ const Login = () => {
               <input type="checkbox" className="rounded border-border" />
               Remember Me
             </label>
-            <Link to="https://t.me/CustomersupportSM" className="text-primary hover:underline">Forgot Password?</Link>
+            <Link to="/forgot-password" className="text-primary hover:underline">Forgot Password?</Link>
           </div>
 
           <button

@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ClipboardList } from "lucide-react";
+import { ChevronLeft, ClipboardList, Receipt } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { ref, onValue, update } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Order {
   id: string;
@@ -18,12 +24,17 @@ interface Order {
   status: "Open" | "Closed";
   result?: string;
   grossPayout?: number;
+  fees?: number;
+  netPnL?: number;
+  balanceBefore?: number;
+  balanceAfter?: number;
 }
 
 const OrdersHistory = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -37,7 +48,6 @@ const OrdersHistory = () => {
           ...val,
         })).sort((a: any, b: any) => b.startTime - a.startTime);
 
-        // Auto-close expired orders
         const now = Date.now();
         ordersList.forEach((order: any) => {
           if (order.status === "Open" && now >= order.endTime) {
@@ -85,7 +95,11 @@ const OrdersHistory = () => {
             orders.map((order) => {
               const status = getDisplayStatus(order);
               return (
-                <div key={order.id} className="card-glass p-4 flex justify-between items-center group hover:border-primary/30 transition-colors">
+                <div
+                  key={order.id}
+                  onClick={() => status === "Closed" && order.result ? setSelectedOrder(order) : null}
+                  className={`card-glass p-4 flex justify-between items-center group hover:border-primary/30 transition-colors ${status === "Closed" && order.result ? "cursor-pointer" : ""}`}
+                >
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`font-bold ${order.type === "Buy" ? "text-accent" : "text-destructive"}`}>
@@ -117,6 +131,63 @@ const OrdersHistory = () => {
           )}
         </div>
       </div>
+
+      {/* Trade Receipt Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+        <DialogContent className="max-w-sm bg-background border-border">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+                  <Receipt className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <DialogTitle className="text-xl font-display">Trade Receipt</DialogTitle>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full border border-accent text-accent">
+                {selectedOrder?.result}
+              </span>
+            </div>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <div className="space-y-6 mt-2">
+              <div className="card-glass p-4 space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Trade Details</h4>
+                {[
+                  ["Trade ID", selectedOrder.id.slice(-6)],
+                  ["Pair", `${selectedOrder.pair} / USDT`],
+                  ["Direction", selectedOrder.type.toUpperCase()],
+                  ["Amount", `${selectedOrder.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                  ["Duration", `${selectedOrder.period}`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-medium text-foreground">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="card-glass p-4 space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">Settlement Summary</h4>
+                {[
+                  ["Result", selectedOrder.result ?? "-"],
+                  ["Gross Payout", `${(selectedOrder.grossPayout ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                  ["Fees", `${(selectedOrder.fees ?? 0).toFixed(2)} USDT`],
+                  ["Net P&L", `${(selectedOrder.netPnL ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                  ["Balance (Before)", `${(selectedOrder.balanceBefore ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                  ["Balance (After)", `${(selectedOrder.balanceAfter ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} USDT`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-medium text-foreground">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <BottomNav />
     </div>
   );
