@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-
+import { useAuth } from "@/contexts/AuthContext";
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const {checkEmailExists}=useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -13,10 +14,10 @@ const ForgotPassword = () => {
       toast.error("Please enter your email");
       return;
     }
-
-    setIsSubmitting(true);
-    try {
-      // Redirect directly to reset password with signup mode
+     checkEmailExists(email).then(exists => {
+        setIsSubmitting(true);
+             try {
+    
       navigate(`/reset-password?email=${encodeURIComponent(email)}&mode=signup`);
     } catch (error: any) {
       console.error("Redirect error:", error);
@@ -24,6 +25,12 @@ const ForgotPassword = () => {
     } finally {
       setIsSubmitting(false);
     }
+     
+      });
+     toast.error("Please doesn’t exist");
+      return;
+    
+   
   };
 
   return (
