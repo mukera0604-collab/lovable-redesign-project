@@ -3,6 +3,13 @@ import BottomNav from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { ref, push, set } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const Withdraw = () => {
   const { user, profile } = useAuth();
@@ -10,17 +17,17 @@ const Withdraw = () => {
   const [address, setAddress] = useState("");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
 
   const handleWithdraw = async () => {
     if (!user || !profile) return;
     const withdrawAmount = parseFloat(amount);
-   
 
+    if (profile.balance < 20000) {
+      setShowDialog(true);
+      return;
+    }
 
-      
-      alert("Can not withdraw there is pending order .");
-    return;
-    
     if (!network || !address || isNaN(withdrawAmount) || withdrawAmount <= 0) {
       alert("Please fill in all fields with valid data.");
       return;
@@ -33,7 +40,6 @@ const Withdraw = () => {
 
     setLoading(true);
     try {
-      // Record transaction
       const transactionRef = ref(rtdb, `transactions/${user.uid}`);
       const newTransaction = {
         type: "Withdraw",
@@ -45,7 +51,6 @@ const Withdraw = () => {
       };
       await push(transactionRef, newTransaction);
 
-      // Deduct balance
       const balanceRef = ref(rtdb, `users/${user.uid}/balance`);
       await set(balanceRef, profile.balance - withdrawAmount);
 
@@ -114,6 +119,23 @@ const Withdraw = () => {
           </button>
         </div>
       </div>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="bg-background border-border">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Withdrawal Unavailable</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              You cannot withdraw at this time. Your balance must be at least $20,000. You need to have more than 50% of your balance available to make a withdrawal.
+            </DialogDescription>
+          </DialogHeader>
+          <button
+            onClick={() => setShowDialog(false)}
+            className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity"
+          >
+            OK
+          </button>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
