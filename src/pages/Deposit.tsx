@@ -10,7 +10,7 @@ const networkAddresses: Record<string, string> = {
   eth: "0xceb7a7b8ea63df33bcc9d29949469514cce32f54",
   bsc: "0xceb7a7b8ea63df33bcc9d29949469514cce32f54",
   tron: "TK4acMVuTCkVjYadHnusZMf8UT2bj5xrbk",
-  polygon: "0xceb7a7b8ea63df33bcc9d29949469514cce32f54",
+  polygon: "0xa83c905a85c5985fb50bc9d6ad01ee8234989624",
   solana: "ADheKPKXRyQrm5VPLnAUd5i6vboWToZ7ZXPsxkoupWa5"
 };
 
